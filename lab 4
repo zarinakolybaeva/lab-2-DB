@@ -1,0 +1,107 @@
+--1
+--a
+select title,credits
+from course
+where credits>3;
+--b
+select room_number,building
+from classroom
+where building='Watson' or building='Packard';
+--c
+select*
+from course
+where dept_name='Comp.Sci';
+--d
+select title
+from course
+where course_id in(select course_id from section where semester='Fall');
+--e
+select  name,tot_cred
+from student
+where tot_cred>45 and tot_cred<90;
+--f
+select name
+from student
+where right(name,1)='a' or right(name,1)='i' or right(name,1)='o' or right(name,1)='e' or right(name,1)='y' or right(name,1)='u';
+--g
+select*
+from course
+where course_id in (select course_id from prereq where prereq_id='CS-101');
+
+
+--2.
+--a
+select dept_name ,avg(salary) as average
+from instructor
+group by dept_name
+order by average;
+--b
+select building,count(course_id) as cnt
+from section
+group by building
+order by cnt desc
+limit 1;
+--c
+select dept_name,count(course_id) as cnt
+from course
+group by dept_name
+order by cnt
+limit 1;
+--d
+select id,name
+from student
+where id in(select id from takes where course_id in
+            (select course_id from course where dept_name='Comp.Sci.')
+             group by id
+             having count(course_id)>3);
+--e
+select name,dept_name
+from instructor
+where dept_name='Biology' or dept_name='Philosophy' or dept_name='Music';
+--f
+select*
+from instructor
+where id in((select id from teaches where year='2018') except (select id from teaches where year='2017'));
+
+
+--3.
+--a
+select name,dept_name
+from student
+where id in(select id from takes where grade = 'A' or grade = 'A-' and dept_name = 'Comp. Sci')
+order by name;
+--b
+select *
+from instructor
+where id in
+      (select i_id
+       from advisor
+       where s_id in (select id from takes where grade != 'A' and grade != 'A-' and grade != 'B+' and grade != 'B'));
+
+--c
+select *
+from department
+where dept_name in (select dept_name
+                     from student
+                     where id in (select id
+                                  from takes
+                                  where grade != 'F'
+                                    and grade != 'C'));
+--d
+select *
+from instructor
+where dept_name in (select dept_name
+                    from student
+                    where id in (select id from takes where grade != 'A' except select id from takes where grade = 'A'));
+--e
+select *
+from course
+where course_id in (select course_id
+                    from section
+                    where time_slot_id in
+                          (select time_slot_id from time_slot where (end_hr <= 12)));
+
+--e
+
+select * from section
+where time_slot_id in(select time_slot_id from time_slot where start_hr < 13);
