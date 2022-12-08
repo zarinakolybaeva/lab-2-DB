@@ -1,0 +1,283 @@
+--a
+create function increments(val integer)
+    returns integer as
+$$
+begin
+    return val + 1;
+end;
+$$
+    language plpgsql;
+
+select increments(5);
+
+--b
+create function sums(x integer, y integer)
+    returns integer as
+$$
+begin
+    return x + y;
+end;
+$$
+    language plpgsql;
+
+select sums(2, 3);
+
+
+--c
+create function div(x integer)
+    returns boolean as
+$$
+begin
+    if x % 2 = 0
+    then
+        return true;
+    else
+        return false;
+    end if;
+end;
+$$
+    language plpgsql;
+
+select div(4);
+--d
+create function password(s varchar)
+    returns boolean as
+$$
+begin
+    if length(s) >= 8
+    then
+        return true;
+    else
+        return false;
+    end if;
+end;
+$$
+    language plpgsql;
+
+select password('qwe89tyuk');
+--e
+create function outt(a numeric, out square numeric, out cube numeric) as
+$$
+begin
+    square = a * a;
+    cube = square * a;
+end;
+$$
+language plpgsql;
+
+select *
+from outt(7);
+
+--2
+--a
+create table tab2_a
+(
+    city     varchar,
+    cur_time timestamp,
+    upd_time timestamp
+);
+create or replace function timee()
+    returns trigger as
+$$
+declare
+    t timestamp;
+begin
+    t = current_timestamp;
+    new.upd_time = t;
+    return new;
+end;
+$$
+    language plpgsql;
+
+create or replace trigger time_trig
+    before update
+    on tab2_a
+    for each row
+execute procedure timee();
+
+insert into tab2_a(city, cur_time)
+values ('Aktau', current_timestamp);
+
+select *
+from tab2_a;
+
+update tab2_a
+set city = 'Astana'
+where city = 'Aktau';
+
+select *
+from tab2_a;
+--b
+drop table tab2_b;
+create  table tab2_b
+(
+    date_of_birth date,
+    age           int default 0
+);
+create or replace function res()
+    returns trigger as
+$$
+begin
+    update tab2_b
+    set age = now() - date_of_birth
+    where date_of_birth is not null;
+    return new;
+end;
+$$
+    language plpgsql;
+
+create trigger newn
+    after insert or update
+    on tab2_b
+    for each row
+execute procedure res();
+
+insert into tab2_b
+values ('2005-09-18 09:12:06.8');
+select *
+from tab2_b;
+--c
+create table tab2_c
+(
+    name  varchar(15),
+    price float
+);
+
+create or replace function tax()
+    returns trigger as
+$$
+begin
+    update tab2_c
+    set price = price * 1.12
+    where price is not null;
+    return new;
+end;
+$$
+    language plpgsql;
+
+create trigger tax_triger
+    after insert or update
+    on tab2_c
+    for each row
+execute procedure tax();
+
+insert into tab2_c
+values ('key', 500);
+select *
+from tab2_c;
+--d
+create table tab2_d(
+
+);
+create function prev()
+    returns trigger as
+$$
+begin
+    raise exception 'Deletion is not allowed!';
+end;
+$$
+    language plpgsql;
+
+create trigger prev_trig
+    before delete
+    on tab2_d
+execute procedure prev();
+
+--e
+create table tab2_e(
+
+);
+create function func()
+    returns trigger as
+$$
+begin
+    raise notice '%', password(new.s);
+    raise notice '%', outt(new.a);
+    return new;
+end;
+$$
+    language plpgsql;
+
+create trigger func_trig
+    before insert
+    on tab2_e
+    for each row
+execute procedure func();
+
+--3
+create table work
+(
+    id             int,
+    name           varchar,
+    date_of_birth  date,
+    age            int,
+    salary         numeric,
+    workexperience int,
+    discount       numeric
+);
+
+--a
+insert into work(id, name, date_of_birth, age, salary, workexperience, discount)
+values
+    (1, 'Dias', '1980-12-02', 42, 150000, 9, 5),
+    (201, 'Didar', '1996-12-02', 26, 155000, 2, 3);
+
+select * from work;
+
+create or replace function proced1()
+returns trigger as
+    $$
+    declare
+    year integer;
+    begin
+        year = new.workexperience - old.workexperience;
+        if year<2 then
+            new.salary = old.salary;
+        elsif year>5 then
+            new.salary = old.salary*((year/2)*0.1) + old.salary;
+            new.discount = old.discount * ((year/5)*0.1) + old.discount;
+        else
+            new.salary = old.salary*((year/2)*0.1) + old.salary;
+        end if;
+        return new;
+    end;
+    $$
+language plpgsql;
+
+create or replace trigger trig_proced1
+    after update on work
+    for each row
+    execute procedure proced1();
+
+select * from work;
+update work set workexperience = 5
+where id = 201;
+
+--b
+create or replace function
+    b(id int, name varchar, date_of_birth date, age int, inout salary numeric, workexperience int, out discount numeric) as
+$$
+declare
+    count int;
+begin
+    if age >= 40 then salary = salary * 1.15;
+    end if;
+    discount = 10;
+    count = workexperience/2;
+    for step in 1..count loop
+        salary = salary * 1.1;
+    end loop;
+    count = workexperience/5;
+    for step in 1..count loop
+        discount = discount * 1.01;
+    end loop;
+    if workexperience > 8 then salary = salary * 1.15;
+    end if;
+    if workexperience > 8 then discount = 20;
+    end if;
+    insert into work values(id, name, date_of_birth, age, salary, workexperience, discount);
+end;
+$$
+language plpgsql;
+
+select * from b(5, 'ali', '2004-07-12', 23, 100000, 7);
